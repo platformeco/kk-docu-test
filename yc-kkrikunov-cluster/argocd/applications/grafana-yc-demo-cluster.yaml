@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grafana-yc-kkrikunov
+  namespace: argocd-infra
+  annotations:
+    argocd.argoproj.io/manifest-generate-paths: .
+spec:
+  project: infra
+  source:
+    repoURL: 'https://github.com/platformeco/kk-docu-test'
+    path: yc-kkrikunov-cluster/grafana
+    plugin:
+      env:
+      - name: HELM_RELEASE_NAME
+        value: infra
+      - name: helm_args
+        value: -f values.yaml
+      name: argocd-vault-plugin-helm
+    targetRevision: HEAD
+  destination:
+    name: yc-kkrikunov
+    namespace: grafana
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+      - CreateNamespace=true

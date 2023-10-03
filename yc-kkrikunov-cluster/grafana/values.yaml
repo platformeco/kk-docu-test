@@ -1,0 +1,33 @@
+grafana:
+  adminPassword: <path:kv/data/yc-demo-platformeco/grafana#adminPassword>
+  adminUser: admin
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      ingress.kubernetes.io/rewrite-target: "/"
+      nginx.ingress.kubernetes.io/proxy-connect-timeout: "360"
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "360"
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "360"
+    hosts:
+    - grafana-demo-test.kk.platformeco.tech
+  initChownData:
+    enabled: true
+  persistence:
+    enabled: true
+    type: pvc
+    size: 20Gi
+    storageClassName: yc-network-ssd
+  rbac:
+    create: true
+    namespaced: false
+    pspEnabled: false
+    pspUseAppArmor: false
+  testFramework:
+    enabled: false
+  env:
+    GF_DATAPROXY_TIMEOUT: 360
+  containerSecurityContext:
+    capabilities:
+      add: ["IPC_LOCK"]
+  useStatefulSet: true
