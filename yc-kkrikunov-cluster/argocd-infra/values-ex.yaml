@@ -1,0 +1,420 @@
+global:
+  image:
+    repository: docker.art.lmru.tech/argoproj/argocd
+    tag: v2.6.0-rc6
+
+redis-ha:
+  enabled: false
+
+redis:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      namespace: prometheus
+      interval: 15s
+  tolerations:
+    - key: "argocd"
+      operator: "Equal"
+      value: "true"
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: application
+            operator: In
+            values:
+            - argocd
+
+
+extraObjects:
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    name: argo-workflows-sso
+  type: Opaque
+  stringData:
+    ARGO_WORKFLOWS_SSO_CLIENT_SECRET: '<path:kv/data/demo-test.kk.platformeco.tech/argocd/sso#clientSecret>'
+- apiVersion: argoproj.io/v1alpha1
+  kind: Application
+  metadata:
+    name: argocd-applications-sync-management
+  spec:
+    project: infra
+    destination:
+      server: 'https://kubernetes.default.svc'
+      namespace: argocd
+    source:
+      path: yc-kkrikunov-cluster/argocd/applications
+      repoURL: 'https://github.com/platformeco/kk-docu-test'
+      targetRevision: HEAD
+      directory:
+        recurse: true
+    syncPolicy:
+      automated:
+        prune: true
+        selfHeal: true
+      syncOptions:
+        - CreateNamespace=true
+        - ApplyOutOfSyncOnly=true
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: cmp-plugin
+  data:
+    avp.yaml: |
+      apiVersion: argoproj.io/v1alpha1
+      kind: ConfigManagementPlugin
+      metadata:
+        name: argocd-vault-plugin
+      spec:
+        allowConcurrency: true
+        discover:
+          find:
+            command:
+              - sh
+              - "-c"
+              - "find . -name '*.yaml' | xargs -I {} grep \"<path\\|avp\\.kubernetes\\.io\" {} | grep ."
+        generate:
+          command:
+            - argocd-vault-plugin
+            - generate
+            - "./"
+        lockRepo: false
+    avp-helm.yaml: |
+      apiVersion: argoproj.io/v1alpha1
+      kind: ConfigManagementPlugin
+      metadata:
+        name: argocd-vault-plugin-helm
+      spec:
+        allowConcurrency: true
+        init:
+          command: [sh, "-c", "helm dependency build"]
+        discover:
+          find:
+            command:
+              - sh
+              - "-c"
+              - |
+                find . -name 'Chart.yaml' && find . -name 'values*.yaml'
+        generate:
+          command:
+            - sh
+            - "-c"
+            - |
+              helm template --api-versions $KUBE_API_VERSIONS --kube-version $KUBE_VERSION --release-name $ARGOCD_ENV_HELM_RELEASE_NAME ${ARGOCD_ENV_helm_args} -n $ARGOCD_APP_NAMESPACE . | argocd-vault-plugin generate - -s argocd:vault-configuration
+        lockRepo: true
+
+
+dex:
+  tolerations:
+    - key: "argocd"
+      operator: "Equal"
+      value: "true"
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: application
+            operator: In
+            values:
+            - argocd
+  enabled: true
+
+server:
+  replicas: 2
+  extraArgs:
+    - --enable-gzip
+  autoscaling:
+    enabled: false
+  metrics:
+    enabled: false
+    serviceMonitor:
+      enable: false
+  tolerations:
+    - key: "argocd"
+      operator: "Equal"
+      value: "true"
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: application
+            operator: In
+            values:
+            - argocd
+  ingress:
+    enabled: true
+    hosts:
+      - argocd-demo-test.kk.platformeco.tech
+    https: false
+
+repoServer:
+  replicas: 3
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      namespace: prometheus
+      interval: 15s
+  autoscaling:
+    enabled: false
+  name: repo-server
+  tolerations:
+    - key: "argocd"
+      operator: "Equal"
+      value: "true"
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: application
+            operator: In
+            values:
+            - argocd
+  serviceAccount:
+    create: false
+    name: argocd-server
+    automountServiceAccountToken: true
+  env:
+    - name: HELM_CACHE_HOME
+      value: /helm-working-dir
+    - name: HELM_CONFIG_HOME
+      value: /helm-working-dir
+    - name: HELM_DATA_HOME
+      value: /helm-working-dir
+  volumes:
+  - name: custom-tools
+    emptyDir: {}
+  - configMap:
+      name: cmp-plugin
+    name: cmp-plugin
+  - name: argocd-vault-plugin-helm-tmp
+    emptyDir: {}
+  - name: argocd-vault-plugin-tmp
+    emptyDir: {}
+  initContainers:
+  - name: download-tools
+    image: docker.art.lmru.tech/alpine:3.17
+    env:
+      - name: AVP_VERSION
+        value: "1.13.1"
+    command: [sh, -c]
+    args:
+      - wget -O argocd-vault-plugin https://github.com/argoproj-labs/argocd-vault-plugin/releases/download/v${AVP_VERSION}/argocd-vault-plugin_${AVP_VERSION}_linux_amd64 &&
+        chmod +x argocd-vault-plugin && mv argocd-vault-plugin /custom-tools/
+    volumeMounts:
+    - mountPath: /custom-tools
+      name: custom-tools
+    - mountPath: /helm-working-dir
+      name: helm-working-dir
+  extraContainers:
+    - name: avp
+      command: [/var/run/argocd/argocd-cmp-server]
+      image: docker.art.lmru.tech/alpine:3.17
+      envFrom:
+        - secretRef:
+            name: vault-configuration
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+      volumeMounts:
+        - mountPath: /var/run/argocd
+          name: var-files
+        - mountPath: /home/argocd/cmp-server/plugins
+          name: plugins
+        - mountPath: /tmp
+          name: argocd-vault-plugin-tmp
+
+          # Register plugins into sidecar
+        - mountPath: /home/argocd/cmp-server/config/plugin.yaml
+          subPath: avp.yaml
+          name: cmp-plugin
+
+        - name: custom-tools
+          subPath: argocd-vault-plugin
+          mountPath: /usr/local/bin/argocd-vault-plugin
+    - name: avp-helm
+      command: [/var/run/argocd/argocd-cmp-server]
+      image: docker.art.lmru.tech/alpine/helm:3.10.2
+      env:
+        - name: HELM_CACHE_HOME
+          value: /helm-working-dir
+        - name: HELM_CONFIG_HOME
+          value: /helm-working-dir
+        - name: HELM_DATA_HOME
+          value: /helm-working-dir
+      envFrom:
+        - secretRef:
+            name: vault-configuration
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+      volumeMounts:
+        - mountPath: /var/run/argocd
+          name: var-files
+        - mountPath: /home/argocd/cmp-server/plugins
+          name: plugins
+        - mountPath: /tmp
+          name: argocd-vault-plugin-helm-tmp
+
+          # Register plugins into sidecar
+        - mountPath: /home/argocd/cmp-server/config/plugin.yaml
+          subPath: avp-helm.yaml
+          name: cmp-plugin
+
+        - name: custom-tools
+          subPath: argocd-vault-plugin-helm
+          mountPath: /usr/local/bin/argocd-vault-plugin-helm
+        - name: custom-tools
+          subPath: argocd-vault-plugin
+          mountPath: /usr/local/bin/argocd-vault-plugin
+        - name: helm-working-dir
+          mountPath: /helm-working-dir
+  volumeMounts:
+  - mountPath: /custom-tools
+    name: custom-tools
+
+
+controller:
+  tolerations:
+    - key: "argocd"
+      operator: "Equal"
+      value: "true"
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: application
+            operator: In
+            values:
+            - argocd
+  replicas: 3
+  env:
+  - name: "ARGOCD_CONTROLLER_REPLICAS"
+    value: "3"
+  enableStatefulSet: true
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      namespace: prometheus
+      interval: 15s
+
+configs:
+  credentialTemplates:
+    adeo-github:
+      url: https://github.com/adeo
+      username: '<path:kv/data/git/github.com#account>'
+      password: '<path:kv/data/git/github.com#token>'
+    lmru-github-enterprise:
+      url: https://github.lmru.tech/adeo
+      username: '<path:kv/data/git/github.lmru.tech#account>'
+      password: '<path:kv/data/git/github.lmru.tech#apimanager_repo_admin_token>'
+    lmru-artifactory:
+      url: https://art.lmru.tech/artifactory/helm
+      username: '<path:kv/data/art.lmru.tech/artifactory#username>'
+      password: '<path:kv/data/art.lmru.tech/artifactory#password>'
+    lmru-artifactory-public:
+      url: https://art.public.lmru.tech/artifactory/helm-platformeco
+      username: '<path:art.public.lmru.tech/data/argocd#user>'
+      password: '<path:art.public.lmru.tech/data/argocd#token>'
+  repositories:
+    ap-platformeco-iac:
+      type: git
+      url: https://github.com/adeo/ap--platformeco-iac
+    ap-dev-cluster-iac:
+      type: git
+      url: https://github.com/adeo/ap--dev-cluster-iac
+    lmru-kong-alerts:
+      type: git
+      url: https://github.com/adeo/lmru-kong-alerts
+    lmru-artifactory:
+      type: helm
+      url: https://art.lmru.tech/artifactory/helm
+    kong:
+      type: helm
+      url: https://charts.konghq.com
+    bitnami:
+      type: helm
+      url: https://charts.bitnami.com/bitnami
+    loki:
+      type: helm
+      url: https://grafana.github.io/helm-charts
+    lmru-artifactory-public:
+      type: helm
+      url: https://art.public.lmru.tech/artifactory/helm-platformeco
+  secret:
+    extra:
+      oidc.crowd.clientSecret: '<path:kv/data/demo-test.kk.platformeco.tech/argocd/oidc/crowd#clientSecret>'
+
+  params:
+    controller.status.processors: 50
+    controller.operation.processors: 25
+    controller.repo.server.timeout.seconds: 180
+    server.config.timeout.reconciliation: 300
+    server.insecure: true
+
+
+applicationSet:
+  enabled: true
+  tolerations:
+    - key: "argocd"
+      operator: "Equal"
+      value: "true"
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: application
+            operator: In
+            values:
+            - argocd
+
+## Notifications controller
+notifications:
+  enabled: true
+  notifiers:
+    service.webhook.voyager: |
+      url: https://release.lmru.tech/api/v1/deploys
+      headers:
+      - name: Content-Type
+        value: application/json
+  templates:
+    template.voyager-message: |
+      webhook:
+        voyager:
+          method: POST
+          body: |
+            {
+              "productId": "{{ index .app.metadata.annotations "lmru.product-id" }}",
+              "serviceName": "{{ .app.metadata.name }}",
+              "app": "{{ index .app.metadata.annotations "lmru.product-name" }}",
+              {{- if eq (index .app.metadata.annotations "lmru.app-env") "com" }}
+                "env": "preprod",
+                "envType": "preprod"
+                {{ else }}
+                  "env": "{{- index .app.metadata.annotations "lmru.app-env" }}",
+                  "envType": "{{- index .app.metadata.annotations "lmru.app-env" }}"
+              {{- end }},
+              "success": true,
+              {{ $version_tag:= false }}
+              {{- range $index, $image:= .app.status.summary.images }}
+                {{- if and (eq (contains (index $.app.metadata.annotations "lmru.image-name") $image) true) (eq $version_tag false) }}
+                  "version": "{{- index ($image | split ":") "_1" }}"
+                  {{ $version_tag = true }}
+                {{- end }}
+              {{- end }},
+              "author": "API Platform"
+            }
+  triggers:
+    trigger.on-sync-succeeded: |
+      - description: Application syncing has succeeded
+        when: app.status.operationState.phase in ['Succeeded']
+        send: [voyager-message]
