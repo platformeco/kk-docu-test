@@ -1,6 +1,6 @@
 global:
   image:
-    repository: docker.art.lmru.tech/argoproj/argocd
+    repository: cr.yandex/crp1h13be5pn9egrno6m/argoproj/argocd
     tag: v2.6.0-rc6
 
 redis-ha:
@@ -10,7 +10,7 @@ redis:
   metrics:
     enabled: true
     serviceMonitor:
-      enabled: true
+      enabled: false
       namespace: prometheus
       interval: 15s
   tolerations:
@@ -41,7 +41,7 @@ extraObjects:
   metadata:
     name: argocd-applications-sync-management
   spec:
-    project: infra
+    project: default
     destination:
       server: 'https://kubernetes.default.svc'
       namespace: argocd
@@ -157,7 +157,7 @@ repoServer:
   metrics:
     enabled: true
     serviceMonitor:
-      enabled: true
+      enabled: false
       namespace: prometheus
       interval: 15s
   autoscaling:
@@ -199,7 +199,7 @@ repoServer:
     emptyDir: {}
   initContainers:
   - name: download-tools
-    image: docker.art.lmru.tech/alpine:3.17
+    image: cr.yandex/crp1h13be5pn9egrno6m/alpine:3.17
     env:
       - name: AVP_VERSION
         value: "1.13.1"
@@ -215,7 +215,7 @@ repoServer:
   extraContainers:
     - name: avp
       command: [/var/run/argocd/argocd-cmp-server]
-      image: docker.art.lmru.tech/alpine:3.17
+      image: cr.yandex/crp1h13be5pn9egrno6m/alpine:3.17
       envFrom:
         - secretRef:
             name: vault-configuration
@@ -240,7 +240,7 @@ repoServer:
           mountPath: /usr/local/bin/argocd-vault-plugin
     - name: avp-helm
       command: [/var/run/argocd/argocd-cmp-server]
-      image: docker.art.lmru.tech/alpine/helm:3.10.2
+      image: cr.yandex/crp1h13be5pn9egrno6m/alpine/helm:3.10.2
       env:
         - name: HELM_CACHE_HOME
           value: /helm-working-dir
@@ -302,7 +302,7 @@ controller:
   metrics:
     enabled: true
     serviceMonitor:
-      enabled: true
+      enabled: false
       namespace: prometheus
       interval: 15s
 
