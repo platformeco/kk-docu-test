@@ -1,5 +1,5 @@
 grafana:
-  adminPassword: <path:kv/data/yc-demo-platformeco/grafana#adminPassword>
+  adminPassword: '<path:kv/data/yc-demo-platformeco/grafana#adminPassword>'
   adminUser: admin
   ingress:
     enabled: true
