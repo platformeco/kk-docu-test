@@ -1,7 +1,7 @@
 argo-cd:
   global:
     image:
-      repository: cr.yandex/crp1h13be5pn9egrno6m/argoproj/argocd
+      repository: argoproj/argocd
       tag: v2.6.0
 
   redis-ha:
