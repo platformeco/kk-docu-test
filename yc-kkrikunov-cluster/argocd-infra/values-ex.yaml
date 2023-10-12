@@ -231,7 +231,7 @@ argo-cd:
             mountPath: /usr/local/bin/argocd-vault-plugin
       - name: avp-helm
         command: [/var/run/argocd/argocd-cmp-server]
-        image: helm:3.12.3
+        image: alpine/helm:3.12.3
         env:
           - name: HOME
             value: /tmp
