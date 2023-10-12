@@ -151,7 +151,7 @@ argo-cd:
         nginx.ingress.kubernetes.io/ssl-redirect: "false"
 
   repoServer:
-    replicas: 3
+    replicas: 1
     metrics:
       enabled: true
       serviceMonitor:
