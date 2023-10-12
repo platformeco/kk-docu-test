@@ -30,13 +30,6 @@ argo-cd:
 
 
   extraObjects:
-  - apiVersion: v1
-    kind: Secret
-    metadata:
-      name: argo-workflows-sso
-    type: Opaque
-    stringData:
-      ARGO_WORKFLOWS_SSO_CLIENT_SECRET: '<path:kv/data/demo-test.kk.platformeco.tech/argocd/sso#clientSecret>'
   - apiVersion: argoproj.io/v1alpha1
     kind: Application
     metadata:
@@ -312,50 +305,6 @@ argo-cd:
         interval: 15s
 
   configs:
-    credentialTemplates:
-      adeo-github:
-        url: https://github.com/adeo
-        username: '<path:kv/data/git/github.com#account>'
-        password: '<path:kv/data/git/github.com#token>'
-      lmru-github-enterprise:
-        url: https://github.lmru.tech/adeo
-        username: '<path:kv/data/git/github.lmru.tech#account>'
-        password: '<path:kv/data/git/github.lmru.tech#apimanager_repo_admin_token>'
-      lmru-artifactory:
-        url: https://art.lmru.tech/artifactory/helm
-        username: '<path:kv/data/art.lmru.tech/artifactory#username>'
-        password: '<path:kv/data/art.lmru.tech/artifactory#password>'
-      lmru-artifactory-public:
-        url: https://art.public.lmru.tech/artifactory/helm-platformeco
-        username: '<path:art.public.lmru.tech/data/argocd#user>'
-        password: '<path:art.public.lmru.tech/data/argocd#token>'
-    repositories:
-      ap-platformeco-iac:
-        type: git
-        url: https://github.com/adeo/ap--platformeco-iac
-      ap-dev-cluster-iac:
-        type: git
-        url: https://github.com/adeo/ap--dev-cluster-iac
-      lmru-kong-alerts:
-        type: git
-        url: https://github.com/adeo/lmru-kong-alerts
-      lmru-artifactory:
-        type: helm
-        url: https://art.lmru.tech/artifactory/helm
-      kong:
-        type: helm
-        url: https://charts.konghq.com
-      bitnami:
-        type: helm
-        url: https://charts.bitnami.com/bitnami
-      loki:
-        type: helm
-        url: https://grafana.github.io/helm-charts
-      lmru-artifactory-public:
-        type: helm
-        url: https://art.public.lmru.tech/artifactory/helm-platformeco
-
-
     params:
       controller.status.processors: 50
       controller.operation.processors: 25
