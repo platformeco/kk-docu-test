@@ -234,11 +234,11 @@ argo-cd:
         image: cr.yandex/crp1h13be5pn9egrno6m/alpine/helm:3.10.2
         env:
           - name: HELM_CACHE_HOME
-            value: /helm-working-dir
+            value: /tmp
           - name: HELM_CONFIG_HOME
-            value: /helm-working-dir
+            value: /tmp
           - name: HELM_DATA_HOME
-            value: /helm-working-dir
+            value: /tmp
         envFrom:
           - secretRef:
               name: vault-configuration
