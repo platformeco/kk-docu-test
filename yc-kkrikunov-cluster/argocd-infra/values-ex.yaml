@@ -178,13 +178,6 @@ argo-cd:
       create: false
       name: argocd-server
       automountServiceAccountToken: true
-    env:
-      - name: HELM_CACHE_HOME
-        value: ""
-      - name: HELM_CONFIG_HOME
-        value: ""
-      - name: HELM_DATA_HOME
-        value: ""
     volumes:
     - name: custom-tools
       emptyDir: {}
@@ -241,11 +234,11 @@ argo-cd:
         image: cr.yandex/crp1h13be5pn9egrno6m/alpine/helm:3.10.2
         env:
           - name: HELM_CACHE_HOME
-            value: ""
+            value: /helm-working-dir
           - name: HELM_CONFIG_HOME
-            value: ""
+            value: /helm-working-dir
           - name: HELM_DATA_HOME
-            value: ""
+            value: /helm-working-dir
         envFrom:
           - secretRef:
               name: vault-configuration
