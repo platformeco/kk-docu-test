@@ -233,8 +233,12 @@ argo-cd:
         command: [/var/run/argocd/argocd-cmp-server]
         image: alpine/helm:3.12.3
         env:
-          - name: HOME
-            value: /tmp
+          - name: HELM_CACHE_HOME
+            value: /helm-working-dir
+          - name: HELM_CONFIG_HOME
+            value: /helm-working-dir
+          - name: HELM_DATA_HOME
+            value: /helm-working-dir
         envFrom:
           - secretRef:
               name: vault-configuration
