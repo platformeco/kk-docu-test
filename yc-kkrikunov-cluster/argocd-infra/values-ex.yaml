@@ -87,7 +87,7 @@ argo-cd:
             command:
               - sh
               - "-c"
-              - "helm dependency build"
+              - "HOME=$(mktemp -d) helm dependency build"
           discover:
             find:
               command:
@@ -100,7 +100,7 @@ argo-cd:
               - sh
               - "-c"
               - |
-                helm template --api-versions $KUBE_API_VERSIONS --kube-version $KUBE_VERSION --release-name $ARGOCD_ENV_HELM_RELEASE_NAME ${ARGOCD_ENV_helm_args} -n $ARGOCD_APP_NAMESPACE . | argocd-vault-plugin generate - -s argocd:vault-configuration
+                HOME=$(mktemp -d) helm template --api-versions $KUBE_API_VERSIONS --kube-version $KUBE_VERSION --release-name $ARGOCD_ENV_HELM_RELEASE_NAME ${ARGOCD_ENV_helm_args} -n $ARGOCD_APP_NAMESPACE . | argocd-vault-plugin generate - -s argocd:vault-configuration
           lockRepo: true
 
 
