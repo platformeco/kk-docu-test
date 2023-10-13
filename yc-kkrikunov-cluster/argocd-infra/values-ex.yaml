@@ -177,6 +177,13 @@ argo-cd:
               operator: In
               values:
               - argocd
+    env:
+      - name: HELM_CACHE_HOME
+        value: ""
+      - name: HELM_CONFIG_HOME
+        value: ""
+      - name: HELM_DATA_HOME
+        value: ""
     serviceAccount:
       create: false
       name: argocd-server
@@ -235,13 +242,6 @@ argo-cd:
       - name: avp-helm
         command: [/var/run/argocd/argocd-cmp-server]
         image: alpine/helm:3.12.3
-        env:
-          - name: HELM_CACHE_HOME
-            value: /helm-working-dir
-          - name: HELM_CONFIG_HOME
-            value: /helm-working-dir
-          - name: HELM_DATA_HOME
-            value: /helm-working-dir
         envFrom:
           - secretRef:
               name: vault-configuration
