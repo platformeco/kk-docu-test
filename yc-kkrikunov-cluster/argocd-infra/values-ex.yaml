@@ -84,10 +84,10 @@ argo-cd:
         spec:
           allowConcurrency: true
           init:
-            command: [sh, "-c", "helm dependency build"]
-            args:
-            - |
-                "${ARGOCD_ENV_helm_args}"
+            command:
+              - sh
+              - "-c"
+              - "helm dependency build ${ARGOCD_ENV_helm_args}"
           discover:
             find:
               command:
