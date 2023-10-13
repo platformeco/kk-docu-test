@@ -87,7 +87,7 @@ argo-cd:
             command: [sh, "-c", "helm dependency build"]
             args:
             - |
-                ${ARGOCD_ENV_helm_args}
+                "${ARGOCD_ENV_helm_args}"
           discover:
             find:
               command:
