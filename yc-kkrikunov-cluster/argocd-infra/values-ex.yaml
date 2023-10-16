@@ -159,8 +159,6 @@ argo-cd:
               operator: In
               values:
               - argocd
-    serviceAccount:
-      create: false
     volumes:
     - name: custom-tools
       emptyDir: {}
@@ -263,7 +261,7 @@ argo-cd:
 
   configs:
     cm:
-      timeout.reconciliation: 300
+      timeout.reconciliation: 300s
     params:
       controller.status.processors: 50
       controller.operation.processors: 25
