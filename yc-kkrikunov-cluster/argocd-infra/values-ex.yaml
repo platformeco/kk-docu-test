@@ -1,8 +1,7 @@
 argo-cd:
   global:
     image:
-      repository: argoproj/argocd
-      tag: v2.6.0
+      repository: argoproj/argocd #TODO Set artifactory path
 
   redis-ha:
     enabled: false
@@ -10,10 +9,6 @@ argo-cd:
   redis:
     metrics:
       enabled: true
-      serviceMonitor:
-        enabled: false
-        namespace: prometheus
-        interval: 15s
     tolerations:
       - key: "argocd"
         operator: "Equal"
@@ -121,19 +116,9 @@ argo-cd:
               operator: In
               values:
               - argocd
-    enabled: true
 
   server:
     replicas: 2
-    extraArgs:
-      - --enable-gzip
-      - --insecure
-    autoscaling:
-      enabled: false
-    metrics:
-      enabled: false
-      serviceMonitor:
-        enable: false
     tolerations:
       - key: "argocd"
         operator: "Equal"
@@ -157,16 +142,10 @@ argo-cd:
         nginx.ingress.kubernetes.io/ssl-redirect: "false"
 
   repoServer:
+    useEphemeralHelmWorkingDir: false
     replicas: 1
     metrics:
       enabled: true
-      serviceMonitor:
-        enabled: false
-        namespace: prometheus
-        interval: 15s
-    autoscaling:
-      enabled: false
-    name: repo-server
     tolerations:
       - key: "argocd"
         operator: "Equal"
@@ -182,8 +161,6 @@ argo-cd:
               - argocd
     serviceAccount:
       create: false
-      name: argocd-server
-      automountServiceAccountToken: true
     volumes:
     - name: custom-tools
       emptyDir: {}
@@ -199,7 +176,7 @@ argo-cd:
       image: cr.yandex/crp1h13be5pn9egrno6m/alpine:3.17
       env:
         - name: AVP_VERSION
-          value: "1.13.1"
+          value: "1.16.1"
       command: [sh, -c]
       args:
         - wget -O argocd-vault-plugin https://github.com/argoproj-labs/argocd-vault-plugin/releases/download/v${AVP_VERSION}/argocd-vault-plugin_${AVP_VERSION}_linux_amd64 &&
@@ -235,7 +212,7 @@ argo-cd:
             mountPath: /usr/local/bin/argocd-vault-plugin
       - name: avp-helm
         command: [/var/run/argocd/argocd-cmp-server]
-        image: alpine/helm:3.12.3
+        image: alpine/helm:3.13.1
         envFrom:
           - secretRef:
               name: vault-configuration
@@ -281,24 +258,18 @@ argo-cd:
               values:
               - argocd
     replicas: 3
-    env:
-    - name: "ARGOCD_CONTROLLER_REPLICAS"
-      value: "3"
-    enableStatefulSet: true
     metrics:
       enabled: true
-      serviceMonitor:
-        enabled: false
-        namespace: prometheus
-        interval: 15s
 
   configs:
-
+    cm:
+      timeout.reconciliation: 300
     params:
       controller.status.processors: 50
       controller.operation.processors: 25
       controller.repo.server.timeout.seconds: 180
-      server.config.timeout.reconciliation: 300
+      server.enable.gzip: true
+      server.insecure: true
 
   applicationSet:
     enabled: true
