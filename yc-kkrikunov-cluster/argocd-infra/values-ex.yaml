@@ -55,14 +55,6 @@ argo-cd:
   - apiVersion: v1
     kind: ConfigMap
     metadata:
-      name: argo-unset-helm-envs
-    data:
-      HELM_CACHE_HOME:
-      HELM_CONFIG_HOME:
-      HELM_DATA_HOME:
-  - apiVersion: v1
-    kind: ConfigMap
-    metadata:
       name: cmp-plugin
     data:
       avp.yaml: |
@@ -95,7 +87,7 @@ argo-cd:
             command:
               - sh
               - "-c"
-              - "HOME=$(mktemp -d) helm dependency build"
+              - "helm dependency build"
           discover:
             find:
               command:
@@ -185,9 +177,6 @@ argo-cd:
               operator: In
               values:
               - argocd
-    envFrom:
-      - configMapRef:
-          name: argo-unset-helm-envs
     serviceAccount:
       create: false
       name: argocd-server
