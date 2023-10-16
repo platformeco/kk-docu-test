@@ -207,8 +207,6 @@ argo-cd:
       volumeMounts:
       - mountPath: /custom-tools
         name: custom-tools
-      - mountPath: /helm-working-dir
-        name: helm-working-dir
     extraContainers:
       - name: avp
         command: [/var/run/argocd/argocd-cmp-server]
@@ -263,8 +261,6 @@ argo-cd:
           - name: custom-tools
             subPath: argocd-vault-plugin
             mountPath: /usr/local/bin/argocd-vault-plugin
-          - name: helm-working-dir
-            mountPath: /helm-working-dir
     volumeMounts:
     - mountPath: /custom-tools
       name: custom-tools
