@@ -87,7 +87,7 @@ argo-cd:
             command:
               - sh
               - "-c"
-              - "helm dependency build"
+              - "HOME=$(mktemp -d) helm dependency build"
           discover:
             find:
               command:
