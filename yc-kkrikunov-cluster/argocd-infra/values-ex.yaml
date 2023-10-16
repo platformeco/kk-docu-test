@@ -1,7 +1,7 @@
 argo-cd:
   global:
     image:
-      repository: argoproj/argocd #TODO Set artifactory path
+      # repository: argoproj/argocd #TODO Set artifactory path
 
   redis-ha:
     enabled: false
